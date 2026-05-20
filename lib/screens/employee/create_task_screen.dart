@@ -104,18 +104,18 @@ class _CreateTaskScreenState extends State<CreateTaskScreen> {
         labels: [],
       );
 
-      // Simulate API call
-      Future.delayed(const Duration(milliseconds: 800), () {
-        MockData.addTask(newTask);
-
-        setState(() => _isLoading = false);
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Task ${newTask.issueKey} created successfully!'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+      // Persist (await round-trips to the backend when not in mock mode).
+      Future(() async {
+        try {
+          await MockData.addTask(newTask);
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Task ${newTask.issueKey} created successfully!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
 
         Navigator.pop(context);
       });

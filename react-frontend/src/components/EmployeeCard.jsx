@@ -1,0 +1,98 @@
+import { Mail } from 'lucide-react';
+import { roleDisplayName } from '@/types';
+import { colors, pastelForId } from '@/utils/theme';
+import { Avatar } from './Avatar.jsx';
+
+export const EmployeeCard = ({ user, tasks = [], onClick }) => {
+  const total = tasks.length;
+  const counts = {
+    todo: tasks.filter((t) => t.status === 'todo').length,
+    inProgress: tasks.filter((t) => t.status === 'inProgress').length,
+    review: tasks.filter((t) => t.status === 'review').length,
+    done: tasks.filter((t) => t.status === 'done').length,
+  };
+  const completionPct = total > 0 ? Math.round((counts.done / total) * 100) : 0;
+  // Stable per-user accent so a grid of employees still reads as distinct
+  // even though the cards themselves are white (Jira-style).
+  const accent = pastelForId(user.id);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="card-base w-full p-4 text-left transition hover:shadow-card-hover"
+      style={{ borderLeft: `3px solid ${accent}` }}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar name={user.name} url={user.avatarUrl} size={44} />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-base font-semibold text-ink">
+            {user.name}
+          </h3>
+          <p className="truncate text-xs text-ink-light">{user.designation}</p>
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-ink-light">
+            <Mail size={11} /> {user.email}
+          </p>
+        </div>
+        <span className="rounded-[3px] bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-secondary">
+          {roleDisplayName(user.role)}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-4 gap-2 border-t border-divider pt-3">
+        <StatusStat label="To Do" value={counts.todo} color={colors.todoGray} />
+        <StatusStat
+          label="Progress"
+          value={counts.inProgress}
+          color={colors.progressBlue}
+        />
+        <StatusStat
+          label="Review"
+          value={counts.review}
+          color={colors.reviewPurple}
+        />
+        <StatusStat label="Done" value={counts.done} color={colors.doneGreen} />
+      </div>
+
+      <div className="mt-3">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="font-medium uppercase tracking-wide text-ink-light">
+            Completion
+          </span>
+          <span
+            className="font-semibold"
+            style={{ color: completionPct > 0 ? colors.doneGreen : colors.textLight }}
+          >
+            {completionPct}% · {counts.done}/{total}
+          </span>
+        </div>
+        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-surface">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${completionPct}%`,
+              backgroundColor: colors.doneGreen,
+            }}
+          />
+        </div>
+      </div>
+
+      {user.teamId && (
+        <div className="mt-2 text-[11px] text-ink-light">
+          Team: <span className="text-ink-secondary">{user.teamId}</span>
+        </div>
+      )}
+    </button>
+  );
+};
+
+const StatusStat = ({ label, value, color }) => (
+  <div>
+    <div className="text-[10px] font-medium uppercase tracking-wide text-ink-light">
+      {label}
+    </div>
+    <div className="text-base font-bold" style={{ color }}>
+      {value}
+    </div>
+  </div>
+);

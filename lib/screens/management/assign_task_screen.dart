@@ -450,8 +450,6 @@ class _ManagementAssignTaskScreenState
 
   String _getPriorityLabel(TaskPriority priority) {
     switch (priority) {
-      case TaskPriority.lowest:
-        return 'Lowest';
       case TaskPriority.low:
         return 'Low';
       case TaskPriority.medium:
@@ -465,8 +463,6 @@ class _ManagementAssignTaskScreenState
 
   Color _getPriorityColor(TaskPriority priority) {
     switch (priority) {
-      case TaskPriority.lowest:
-        return AppColors.priorityLowest;
       case TaskPriority.low:
         return AppColors.priorityLow;
       case TaskPriority.medium:

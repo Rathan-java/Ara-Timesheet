@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/user_model.dart';
 import '../../data/mock_data.dart';
+import '../../models/user_model.dart';
+import '../../services/api_config.dart';
+import '../../services/auth_service.dart';
 import '../../utils/app_colors.dart';
 import '../../utils/app_routes.dart';
 
@@ -15,9 +17,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  UserRole _selectedRole = UserRole.employee;
   bool _obscurePassword = true;
   bool _isLoading = false;
+  String? _error;
 
   @override
   void dispose() {
@@ -26,36 +28,57 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+  String _routeForRole(UserRole role) {
+    switch (role) {
+      case UserRole.teamLead:
+        return AppRoutes.tlDashboard;
+      case UserRole.management:
+        return AppRoutes.managementDashboard;
+      case UserRole.employee:
+        return AppRoutes.employeeDashboard;
+    }
+  }
 
-      // Simulate login delay
-      Future.delayed(const Duration(milliseconds: 800), () {
-        setState(() => _isLoading = false);
+  // Mock login keeps the demo experience: anyone can sign in and we pick a
+  // user from the static seed based on the local part of the email.
+  User _mockUserFor(String email) {
+    final local = email.split('@').first.toLowerCase();
+    if (local.startsWith('mgmt') || local == 'management') {
+      return MockData.management.first;
+    }
+    if (local.startsWith('lead') || local.startsWith('tl')) {
+      return MockData.teamLeads.first;
+    }
+    return MockData.employees.first;
+  }
 
-        // Set mock user based on selected role
-        switch (_selectedRole) {
-          case UserRole.employee:
-            MockData.currentUser = MockData.employees[0];
-            Navigator.pushReplacementNamed(
-              context,
-              AppRoutes.employeeDashboard,
-            );
-            break;
-          case UserRole.teamLead:
-            MockData.currentUser = MockData.teamLeads[0];
-            Navigator.pushReplacementNamed(context, AppRoutes.tlDashboard);
-            break;
-          case UserRole.management:
-            MockData.currentUser = MockData.management[0];
-            Navigator.pushReplacementNamed(
-              context,
-              AppRoutes.managementDashboard,
-            );
-            break;
-        }
-      });
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      User user;
+      if (ApiConfig.useMock) {
+        await Future.delayed(const Duration(milliseconds: 400));
+        user = _mockUserFor(_emailController.text.trim());
+      } else {
+        user = await AuthService.login(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+        // Replace mock caches with real data fetched after auth.
+        await MockData.loadFromBackend();
+      }
+      MockData.currentUser = user;
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, _routeForRole(user.role));
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -69,8 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 40),
-              // Logo/Header
+              const SizedBox(height: 60),
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
@@ -101,68 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 40),
 
-              // Role Selection
-              const Text(
-                'Select your role',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: UserRole.values.map((role) {
-                  final isSelected = _selectedRole == role;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _selectedRole = role),
-                      child: Container(
-                        margin: EdgeInsets.only(
-                          right: role != UserRole.management ? 8 : 0,
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppColors.primary
-                              : AppColors.cardBackground,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.divider,
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(
-                              _getRoleIcon(role),
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                              size: 24,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _getRoleName(role),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? Colors.white
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 32),
-
-              // Login Form
               Form(
                 key: _formKey,
                 child: Column(
@@ -194,12 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        return null;
-                      },
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Please enter your email' : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -239,19 +195,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        return null;
-                      },
+                      validator: (v) => v == null || v.isEmpty
+                          ? 'Please enter your password'
+                          : null,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
 
-              // Login Button
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: AppColors.error,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
               SizedBox(
                 height: 56,
                 child: ElevatedButton(
@@ -290,27 +260,5 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getRoleIcon(UserRole role) {
-    switch (role) {
-      case UserRole.employee:
-        return Icons.person_outline;
-      case UserRole.teamLead:
-        return Icons.group_outlined;
-      case UserRole.management:
-        return Icons.business_center_outlined;
-    }
-  }
-
-  String _getRoleName(UserRole role) {
-    switch (role) {
-      case UserRole.employee:
-        return 'Employee';
-      case UserRole.teamLead:
-        return 'Team Lead';
-      case UserRole.management:
-        return 'Management';
-    }
   }
 }

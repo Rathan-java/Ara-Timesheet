@@ -25,8 +25,6 @@ class PriorityIcon extends StatelessWidget {
         return AppColors.priorityMedium;
       case TaskPriority.low:
         return AppColors.priorityLow;
-      case TaskPriority.lowest:
-        return AppColors.priorityLowest;
     }
   }
 
@@ -40,8 +38,6 @@ class PriorityIcon extends StatelessWidget {
         return Icons.remove;
       case TaskPriority.low:
         return Icons.keyboard_arrow_down;
-      case TaskPriority.lowest:
-        return Icons.keyboard_double_arrow_down;
     }
   }
 
@@ -55,8 +51,6 @@ class PriorityIcon extends StatelessWidget {
         return 'Medium';
       case TaskPriority.low:
         return 'Low';
-      case TaskPriority.lowest:
-        return 'Lowest';
     }
   }
 
@@ -154,8 +148,6 @@ class PrioritySelector extends StatelessWidget {
         return AppColors.priorityMedium;
       case TaskPriority.low:
         return AppColors.priorityLow;
-      case TaskPriority.lowest:
-        return AppColors.priorityLowest;
     }
   }
 
@@ -169,8 +161,6 @@ class PrioritySelector extends StatelessWidget {
         return Icons.remove;
       case TaskPriority.low:
         return Icons.keyboard_arrow_down;
-      case TaskPriority.lowest:
-        return Icons.keyboard_double_arrow_down;
     }
   }
 
@@ -184,8 +174,6 @@ class PrioritySelector extends StatelessWidget {
         return 'Medium';
       case TaskPriority.low:
         return 'Low';
-      case TaskPriority.lowest:
-        return 'Lowest';
     }
   }
 }

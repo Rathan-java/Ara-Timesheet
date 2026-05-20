@@ -1,6 +1,6 @@
 enum TaskStatus { todo, inProgress, done, review }
 
-enum TaskPriority { lowest, low, medium, high, highest }
+enum TaskPriority { low, medium, high, highest }
 
 class Task {
   final String id;
@@ -63,8 +63,6 @@ class Task {
 
   String get priorityDisplayName {
     switch (priority) {
-      case TaskPriority.lowest:
-        return 'Lowest';
       case TaskPriority.low:
         return 'Low';
       case TaskPriority.medium:
