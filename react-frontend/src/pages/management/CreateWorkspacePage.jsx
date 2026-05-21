@@ -76,7 +76,7 @@ export const CreateWorkspacePage = () => {
               className="input-base"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Schoolate"
+              placeholder="e.g. Schoolmate"
               required
             />
           </Field>
