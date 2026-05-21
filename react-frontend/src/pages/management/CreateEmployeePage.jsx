@@ -1,5 +1,5 @@
-import { Camera } from 'lucide-react';
-import { useState } from 'react';
+import { Camera, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
 import { Avatar } from '@/components/Avatar.jsx';
@@ -7,21 +7,24 @@ import { useData } from '@/context/TasksContext.jsx';
 import { roleDisplayName } from '@/types';
 
 const ROLES = ['employee', 'teamLead', 'management'];
-const TEAMS = [
-  { id: 'team1', label: 'Team 1' },
-  { id: 'team2', label: 'Team 2' },
-];
 
 export const CreateEmployeePage = () => {
   const navigate = useNavigate();
-  const { createUser } = useData();
+  const { createUser, teams } = useData();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [designation, setDesignation] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('employee');
-  const [teamId, setTeamId] = useState('team1');
+  const [teamId, setTeamId] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Default to the first team once the teams list loads.
+  useEffect(() => {
+    if (!teamId && teams.length > 0) setTeamId(teams[0].id);
+  }, [teams, teamId]);
 
   const requiresTeam = role === 'employee' || role === 'teamLead';
 
@@ -32,12 +35,17 @@ export const CreateEmployeePage = () => {
       setError('Name, email and designation are required.');
       return;
     }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
     setSubmitting(true);
     try {
       await createUser({
         name: name.trim(),
         email: email.trim(),
         designation: designation.trim(),
+        password,
         role,
         teamId: requiresTeam ? teamId : undefined,
       });
@@ -103,6 +111,31 @@ export const CreateEmployeePage = () => {
             />
           </Field>
 
+          <Field label="Initial password">
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="input-base pr-10"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-light hover:text-ink-secondary"
+                onClick={() => setShowPassword((s) => !s)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-ink-light">
+              Share this with the user so they can sign in. They can change it later.
+            </p>
+          </Field>
+
           <Field label="Role">
             <div className="flex flex-wrap gap-2">
               {ROLES.map((r) => (
@@ -124,22 +157,26 @@ export const CreateEmployeePage = () => {
 
           {requiresTeam && (
             <Field label="Team">
-              <div className="flex flex-wrap gap-2">
-                {TEAMS.map((t) => (
-                  <button
-                    type="button"
-                    key={t.id}
-                    onClick={() => setTeamId(t.id)}
-                    className={`rounded-jira px-3 py-1.5 text-xs font-semibold transition ${
-                      teamId === t.id
-                        ? 'bg-primary text-white'
-                        : 'bg-card border border-divider text-ink-secondary hover:bg-surface'
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
+              {teams.length === 0 ? (
+                <p className="text-xs text-ink-light">Loading teams…</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {teams.map((t) => (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => setTeamId(t.id)}
+                      className={`rounded-jira px-3 py-1.5 text-xs font-semibold transition ${
+                        teamId === t.id
+                          ? 'bg-primary text-white'
+                          : 'bg-card border border-divider text-ink-secondary hover:bg-surface'
+                      }`}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </Field>
           )}
 

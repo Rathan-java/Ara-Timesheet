@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../models/task_model.dart';
 import '../models/workspace_model.dart';
-import '../services/api_config.dart';
-import '../services/task_service.dart';
-import '../services/user_service.dart';
-import '../services/workspace_service.dart';
 import '../utils/app_colors.dart';
 
 class MockData {
@@ -493,60 +489,21 @@ class MockData {
     return workspace.nextIssueNumber;
   }
 
-  // Refresh the static caches from the backend. Called after a successful
-  // login when ApiConfig.useMock is false. Screens keep reading from the
-  // static lists; this method just swaps what's inside them.
-  static Future<void> loadFromBackend() async {
-    final futures = await Future.wait([
-      UserService.getAll(),
-      WorkspaceService.getAll(),
-      TaskService.getAll(),
-    ]);
-    final allUsers = futures[0] as List<User>;
-    workspaces = (futures[1] as List<Workspace>).toList();
-    tasks = (futures[2] as List<Task>).toList();
-    employees = allUsers.where((u) => u.role == UserRole.employee).toList();
-    teamLeads = allUsers.where((u) => u.role == UserRole.teamLead).toList();
-    management = allUsers.where((u) => u.role == UserRole.management).toList();
-  }
-
-  // Add a new task. When pointed at a real backend the create is persisted
-  // and the returned task (with its real id + issueNumber) is what we cache.
-  static Future<Task> addTask(Task task) async {
-    Task persisted = task;
-    if (!ApiConfig.useMock) {
-      persisted = await TaskService.create(
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        priority: task.priority,
-        workspaceId: task.workspaceId,
-        assigneeId: task.assigneeId,
-        estimatedHours: task.estimatedHours,
-        deadline: task.deadline,
-      );
-    }
-    tasks.add(persisted);
-    final wsIndex = workspaces.indexWhere((ws) => ws.id == persisted.workspaceId);
+  // Add a new task
+  static void addTask(Task task) {
+    tasks.add(task);
+    // Update workspace next issue number
+    final wsIndex = workspaces.indexWhere((ws) => ws.id == task.workspaceId);
     if (wsIndex != -1) {
-      workspaces[wsIndex].nextIssueNumber = persisted.issueNumber + 1;
+      workspaces[wsIndex].nextIssueNumber = task.issueNumber + 1;
     }
-    return persisted;
   }
 
-  // Update task status. Optimistic local update; rolls back on API failure.
-  static Future<void> updateTaskStatus(String taskId, TaskStatus newStatus) async {
+  // Update task status
+  static void updateTaskStatus(String taskId, TaskStatus newStatus) {
     final index = tasks.indexWhere((t) => t.id == taskId);
-    if (index == -1) return;
-    final previous = tasks[index];
-    tasks[index] = previous.copyWith(status: newStatus);
-    if (ApiConfig.useMock) return;
-    try {
-      final updated = await TaskService.updateStatus(taskId, newStatus);
-      tasks[index] = updated;
-    } catch (e) {
-      tasks[index] = previous;
-      rethrow;
+    if (index != -1) {
+      tasks[index] = tasks[index].copyWith(status: newStatus);
     }
   }
 

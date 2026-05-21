@@ -21,7 +21,26 @@ export const workspaceService = {
       return [...workspaces];
     }
     const rows = await apiRequest('/workspaces');
-    return rows.map(workspaceFromBackend);
+    const mapped = rows.map(workspaceFromBackend);
+    // Some backend versions don't return member_ids on the list query (only
+    // member_count). When that's the case, hydrate each workspace's members
+    // via the detail endpoint so member dropdowns and avatar groups work.
+    const needsHydration = mapped.some(
+      (w) => (!w.memberIds || w.memberIds.length === 0) && w.totalTasks >= 0,
+    );
+    if (!needsHydration) return mapped;
+    const detailed = await Promise.all(
+      mapped.map(async (w) => {
+        try {
+          const detail = await apiRequest(`/workspaces/${w.id}`);
+          const enriched = workspaceFromBackend(detail);
+          return { ...w, memberIds: enriched.memberIds };
+        } catch {
+          return w; // keep partial info on failure rather than blanking the list
+        }
+      }),
+    );
+    return detailed;
   },
 
   async getById(id) {

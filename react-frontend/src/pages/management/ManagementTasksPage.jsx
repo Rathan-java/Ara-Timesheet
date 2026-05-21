@@ -7,6 +7,7 @@ import { MiniStatCard } from '@/components/StatCard.jsx';
 import { TaskCard } from '@/components/TaskCard.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useData } from '@/context/TasksContext.jsx';
+import { FEATURE_EXPORT } from '@/services/config';
 import { exportService } from '@/services/exportService';
 import { isOverdue } from '@/types';
 import { colors } from '@/utils/theme';
@@ -107,15 +108,17 @@ export const ManagementTasksPage = () => {
     <AppLayout
       title="All Tasks"
       action={
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={exporting}
-          className="btn-secondary"
-          title="Download all tasks as Excel"
-        >
-          <Download size={16} /> {exporting ? 'Exporting…' : 'Export to Excel'}
-        </button>
+        FEATURE_EXPORT ? (
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting}
+            className="btn-secondary"
+            title="Download all tasks as Excel"
+          >
+            <Download size={16} /> {exporting ? 'Exporting…' : 'Export to Excel'}
+          </button>
+        ) : null
       }
     >
       <div className="mx-auto max-w-6xl p-4 lg:p-6">

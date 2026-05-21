@@ -12,6 +12,7 @@ import {
   useState,
 } from 'react';
 import { taskService } from '@/services/taskService';
+import { teamService } from '@/services/teamService';
 import { userService } from '@/services/userService';
 import { workspaceService } from '@/services/workspaceService';
 
@@ -21,19 +22,22 @@ export const DataProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, u, w] = await Promise.all([
+      const [t, u, w, tm] = await Promise.all([
         taskService.getAll(),
         userService.getAll(),
         workspaceService.getAll(),
+        teamService.getAll(),
       ]);
       setTasks(t);
       setUsers(u);
       setWorkspaces(w);
+      setTeams(tm);
     } finally {
       setLoading(false);
     }
@@ -48,6 +52,7 @@ export const DataProvider = ({ children }) => {
       tasks,
       users,
       workspaces,
+      teams,
       loading,
       reload,
       async createTask(payload) {
@@ -106,7 +111,7 @@ export const DataProvider = ({ children }) => {
         }
       },
     }),
-    [tasks, users, workspaces, loading, reload],
+    [tasks, users, workspaces, teams, loading, reload],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
