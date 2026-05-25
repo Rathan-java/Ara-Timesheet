@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
 import { PrioritySelector } from '@/components/PriorityIcon.jsx';
@@ -10,11 +10,28 @@ import { useData } from '@/context/TasksContext.jsx';
 export const CreateTaskPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { workspaces, createTask } = useData();
+  const { workspaces, loading, createTask } = useData();
+
+  // Employees can only create tasks in workspaces they're a member of.
+  // TLs / management can use any workspace.
+  const myWorkspaces = useMemo(() => {
+    if (!user) return [];
+    if (user.role === 'employee') {
+      return workspaces.filter((w) => w.memberIds.includes(user.id));
+    }
+    return workspaces;
+  }, [workspaces, user]);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [workspaceId, setWorkspaceId] = useState(workspaces[0]?.id ?? '');
+  const [workspaceId, setWorkspaceId] = useState('');
+  // Auto-select the first available workspace once the list resolves. Re-runs
+  // if the user gets added to a workspace mid-session.
+  useEffect(() => {
+    if (!workspaceId && myWorkspaces.length > 0) {
+      setWorkspaceId(myWorkspaces[0].id);
+    }
+  }, [myWorkspaces, workspaceId]);
   const [priority, setPriority] = useState('medium');
   const [status, setStatus] = useState('todo');
   const [deadline, setDeadline] = useState(() => {
@@ -97,17 +114,28 @@ export const CreateTaskPage = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Workspace">
-              <select
-                className="input-base"
-                value={workspaceId}
-                onChange={(e) => setWorkspaceId(e.target.value)}
-              >
-                {workspaces.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name} ({w.projectCode})
-                  </option>
-                ))}
-              </select>
+              {loading && myWorkspaces.length === 0 ? (
+                <p className="rounded-jira border border-divider bg-surface px-3 py-2 text-xs text-ink-light">
+                  Loading workspaces…
+                </p>
+              ) : myWorkspaces.length === 0 ? (
+                <p className="rounded-jira border border-divider bg-error/10 px-3 py-2 text-xs text-error">
+                  You're not a member of any workspace yet. Ask management or
+                  your team lead to add you to one.
+                </p>
+              ) : (
+                <select
+                  className="input-base"
+                  value={workspaceId}
+                  onChange={(e) => setWorkspaceId(e.target.value)}
+                >
+                  {myWorkspaces.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name} ({w.projectCode})
+                    </option>
+                  ))}
+                </select>
+              )}
             </Field>
             <Field label="Deadline">
               <input
