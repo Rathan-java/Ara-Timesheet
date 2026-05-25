@@ -34,6 +34,24 @@ export const apiFetch = async (path, options = {}) => {
   });
 };
 
+// When the backend returns 401, the most likely cause is an expired JWT.
+// Clear local auth state and bounce the user back to /login so they re-auth
+// instead of staring at an empty page (which previously looked like "no data").
+// We only redirect from inside a browser environment and avoid loops by
+// checking the current path.
+const handleUnauthorized = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+  } catch {
+    // Ignore storage errors (private mode, etc.).
+  }
+  if (window.location.pathname !== '/login') {
+    window.location.assign('/login?reason=session_expired');
+  }
+};
+
 export const apiRequest = async (path, options = {}) => {
   const res = await apiFetch(path, options);
 
@@ -42,6 +60,11 @@ export const apiRequest = async (path, options = {}) => {
   const ct = res.headers.get('content-type') ?? '';
   const isJson = ct.includes('application/json');
   const body = isJson ? await res.json().catch(() => null) : null;
+
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new Error('Session expired. Please log in again.');
+  }
 
   if (!res.ok) {
     const msg = body?.message || res.statusText || `HTTP ${res.status}`;

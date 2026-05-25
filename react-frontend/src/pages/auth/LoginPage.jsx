@@ -1,6 +1,6 @@
 import { Eye, EyeOff, Lock, Mail, Timer } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { colors, withAlpha } from '@/utils/theme';
 
@@ -13,11 +13,16 @@ const ROLE_HOME = {
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get('reason') === 'session_expired';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState(
+    sessionExpired ? 'Your session expired. Please log in again.' : null,
+  );
 
   const onSubmit = async (e) => {
     e.preventDefault();
