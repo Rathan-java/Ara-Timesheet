@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, Folder, Plus, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Folder, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { iconByName } from './iconRegistry.js';
 import { Avatar } from './Avatar.jsx';
@@ -24,6 +24,7 @@ export const WorkspaceCard = ({
   nonMembers = [],
   onAddMember,
   onRemoveMember,
+  onDelete,
 }) => {
   const Icon = iconByName(workspace.icon) ?? Folder;
   const pct = Math.round(workspaceCompletion(workspace) * 100);
@@ -90,11 +91,26 @@ export const WorkspaceCard = ({
           onClick();
         }
       }}
-      className={`card-base w-full p-4 text-left transition hover:shadow-card-hover ${
+      className={`card-base group/wscard relative w-full p-4 text-left transition hover:shadow-card-hover ${
         onClick ? 'cursor-pointer' : ''
       }`}
       style={{ borderLeft: `3px solid ${workspace.color}` }}
     >
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-jira text-ink-light opacity-0 transition hover:bg-error/10 hover:text-error group-hover/wscard:opacity-100 focus:opacity-100"
+          title="Delete workspace"
+          aria-label={`Delete ${workspace.name}`}
+        >
+          <Trash2 size={14} />
+        </button>
+      )}
+
       <div className="flex items-start gap-3">
         <span
           className="inline-flex items-center justify-center rounded-jira-lg p-2.5"

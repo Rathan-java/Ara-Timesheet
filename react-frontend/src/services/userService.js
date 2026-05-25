@@ -107,6 +107,34 @@ export const userService = {
     });
     return userFromBackend(row);
   },
+
+  async delete(id) {
+    if (USE_MOCK) {
+      await mockDelay();
+      for (const pool of [employees, teamLeads, management]) {
+        const idx = pool.findIndex((u) => u.id === id);
+        if (idx !== -1) {
+          pool.splice(idx, 1);
+          return;
+        }
+      }
+      throw new Error(`User not found: ${id}`);
+    }
+    await apiRequest(`/users/${id}`, { method: 'DELETE' });
+  },
+
+  // Admin password reset. Requires backend endpoint POST /users/:id/reset-password
+  // (added in feat/admin-password-reset PR). Until that PR merges this will 404.
+  async resetPassword(id, newPassword) {
+    if (USE_MOCK) {
+      await mockDelay();
+      return;
+    }
+    await apiRequest(`/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  },
 };
 
 // Re-export so callers that want the raw role mapping can use it.

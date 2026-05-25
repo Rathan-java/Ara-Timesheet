@@ -2,8 +2,10 @@ import { Search, UserPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog.jsx';
 import { EmployeeCard } from '@/components/EmployeeCard.jsx';
 import { EmptyState } from '@/components/EmptyState.jsx';
+import { ResetPasswordDialog } from '@/components/ResetPasswordDialog.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useData } from '@/context/TasksContext.jsx';
 import { userDetailPath } from '@/utils/paths';
@@ -16,10 +18,18 @@ const TEAM_FILTERS = [
 
 export const AllEmployeesPage = () => {
   const { user } = useAuth();
-  const { users, tasks } = useData();
+  const { users, tasks, deleteUser, resetUserPassword } = useData();
   const navigate = useNavigate();
   const [teamFilter, setTeamFilter] = useState('all');
   const [query, setQuery] = useState('');
+
+  // Per-action dialog state. Holds the target user while the dialog is open.
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const canManage = user?.role === 'management';
 
   const employees = useMemo(() => {
     return users.filter((u) => {
@@ -36,6 +46,34 @@ export const AllEmployeesPage = () => {
       return true;
     });
   }, [users, teamFilter, query]);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteUser(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete user.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleResetPassword = async (newPassword) => {
+    if (!resetTarget) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await resetUserPassword(resetTarget.id, newPassword);
+      setResetTarget(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to reset password.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <AppLayout
@@ -95,11 +133,44 @@ export const AllEmployeesPage = () => {
                 user={u}
                 tasks={tasks.filter((t) => t.assigneeId === u.id)}
                 onClick={() => navigate(userDetailPath(user?.role, u.id))}
+                onDelete={canManage ? () => setDeleteTarget(u) : undefined}
+                onResetPassword={
+                  canManage ? () => setResetTarget(u) : undefined
+                }
               />
             ))
           )}
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(deleteTarget)}
+        title="Delete employee?"
+        itemLabel={deleteTarget?.name ?? ''}
+        busy={busy}
+        error={error}
+        onCancel={() => {
+          if (!busy) {
+            setDeleteTarget(null);
+            setError(null);
+          }
+        }}
+        onConfirm={handleDelete}
+      />
+
+      <ResetPasswordDialog
+        open={Boolean(resetTarget)}
+        userLabel={resetTarget?.name ?? ''}
+        busy={busy}
+        error={error}
+        onCancel={() => {
+          if (!busy) {
+            setResetTarget(null);
+            setError(null);
+          }
+        }}
+        onConfirm={handleResetPassword}
+      />
     </AppLayout>
   );
 };

@@ -67,10 +67,24 @@ export const DataProvider = ({ children }) => {
         setUsers((prev) => [...prev, u]);
         return u;
       },
+      async deleteUser(userId) {
+        await userService.delete(userId);
+        setUsers((prev) => prev.filter((u) => u.id !== userId));
+      },
+      async resetUserPassword(userId, newPassword) {
+        await userService.resetPassword(userId, newPassword);
+      },
       async createWorkspace(payload) {
         const w = await workspaceService.create(payload);
         setWorkspaces((prev) => [...prev, w]);
         return w;
+      },
+      async deleteWorkspace(workspaceId) {
+        await workspaceService.delete(workspaceId);
+        setWorkspaces((prev) => prev.filter((w) => w.id !== workspaceId));
+        // Drop any tasks that referenced the deleted workspace so the UI
+        // doesn't show stale counts.
+        setTasks((prev) => prev.filter((t) => t.workspaceId !== workspaceId));
       },
       async addWorkspaceMember(workspaceId, userId) {
         const w = await workspaceService.addMember(workspaceId, userId);

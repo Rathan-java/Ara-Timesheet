@@ -95,6 +95,17 @@ export const workspaceService = {
     return refetch(workspaceId);
   },
 
+  async delete(id) {
+    if (USE_MOCK) {
+      await mockDelay();
+      const idx = workspaces.findIndex((w) => w.id === id);
+      if (idx === -1) throw new Error(`Workspace not found: ${id}`);
+      workspaces.splice(idx, 1);
+      return;
+    }
+    await apiRequest(`/workspaces/${id}`, { method: 'DELETE' });
+  },
+
   async removeMember(workspaceId, userId) {
     if (USE_MOCK) {
       await mockDelay(100);

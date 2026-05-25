@@ -4,9 +4,10 @@
 // - Only Management can create new workspaces.
 
 import { Plus } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog.jsx';
 import { EmptyState } from '@/components/EmptyState.jsx';
 import { TaskCard } from '@/components/TaskCard.jsx';
 import { WorkspaceCard } from '@/components/WorkspaceCard.jsx';
@@ -22,8 +23,27 @@ export const WorkspacesPage = () => {
     users,
     addWorkspaceMember,
     removeWorkspaceMember,
+    deleteWorkspace,
   } = useData();
   const navigate = useNavigate();
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const canDelete = user?.role === 'management';
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteWorkspace(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete workspace.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Resolve memberIds → User objects once for the whole page.
   const userById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
@@ -98,6 +118,7 @@ export const WorkspacesPage = () => {
                         ? (uid) => removeWorkspaceMember(w.id, uid)
                         : undefined
                     }
+                    onDelete={canDelete ? () => setDeleteTarget(w) : undefined}
                     onClick={() => navigate(workspaceDetailPath(user?.role, w.id))}
                   />
                   <div className="card-base p-4">
@@ -127,6 +148,25 @@ export const WorkspacesPage = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteDialog
+        open={Boolean(deleteTarget)}
+        title="Delete workspace?"
+        itemLabel={
+          deleteTarget
+            ? `${deleteTarget.name} (${deleteTarget.projectCode})`
+            : ''
+        }
+        busy={busy}
+        error={error}
+        onCancel={() => {
+          if (!busy) {
+            setDeleteTarget(null);
+            setError(null);
+          }
+        }}
+        onConfirm={handleDelete}
+      />
     </AppLayout>
   );
 };

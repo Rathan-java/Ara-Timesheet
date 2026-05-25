@@ -1,9 +1,20 @@
-import { Mail } from 'lucide-react';
+import { KeyRound, Mail, Trash2 } from 'lucide-react';
 import { roleDisplayName } from '@/types';
-import { colors, pastelForId } from '@/utils/theme';
+import { colors } from '@/utils/theme';
 import { Avatar } from './Avatar.jsx';
 
-export const EmployeeCard = ({ user, tasks = [], onClick }) => {
+// Props:
+// - user, tasks, onClick: as before
+// - onDelete (optional): when passed, shows a trash icon. Receives no args;
+//   parent owns the confirm dialog + actual API call.
+// - onResetPassword (optional): when passed, shows a key icon. Same pattern.
+export const EmployeeCard = ({
+  user,
+  tasks = [],
+  onClick,
+  onDelete,
+  onResetPassword,
+}) => {
   const total = tasks.length;
   const counts = {
     todo: tasks.filter((t) => t.status === 'todo').length,
@@ -12,17 +23,61 @@ export const EmployeeCard = ({ user, tasks = [], onClick }) => {
     done: tasks.filter((t) => t.status === 'done').length,
   };
   const completionPct = total > 0 ? Math.round((counts.done / total) * 100) : 0;
-  // Stable per-user accent so a grid of employees still reads as distinct
-  // even though the cards themselves are white (Jira-style).
-  const accent = pastelForId(user.id);
+  const hasActions = Boolean(onDelete || onResetPassword);
+
+  const handleActivate = () => {
+    if (onClick) onClick();
+  };
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="card-base w-full p-4 text-left transition hover:shadow-card-hover"
-      style={{ borderLeft: `3px solid ${accent}` }}
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick ? handleActivate : undefined}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          handleActivate();
+        }
+      }}
+      className={`card-base group/card relative w-full p-4 text-left transition hover:shadow-card-hover ${
+        onClick ? 'cursor-pointer' : ''
+      }`}
+      style={{ borderLeft: `3px solid ${colors.primary}` }}
     >
+      {hasActions && (
+        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition group-hover/card:opacity-100 focus-within:opacity-100">
+          {onResetPassword && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onResetPassword();
+              }}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-jira text-ink-light transition hover:bg-primary/10 hover:text-primary"
+              title="Reset password"
+              aria-label={`Reset password for ${user.name}`}
+            >
+              <KeyRound size={14} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-jira text-ink-light transition hover:bg-error/10 hover:text-error"
+              title="Delete employee"
+              aria-label={`Delete ${user.name}`}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="flex items-start gap-3">
         <Avatar name={user.name} url={user.avatarUrl} size={44} />
         <div className="min-w-0 flex-1">
@@ -82,7 +137,7 @@ export const EmployeeCard = ({ user, tasks = [], onClick }) => {
           Team: <span className="text-ink-secondary">{user.teamId}</span>
         </div>
       )}
-    </button>
+    </div>
   );
 };
 
