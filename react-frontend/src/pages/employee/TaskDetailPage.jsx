@@ -6,6 +6,7 @@ import {
   Folder,
   Pencil,
   Tag,
+  Trash2,
   User as UserIcon,
   X,
 } from 'lucide-react';
@@ -13,6 +14,7 @@ import { useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
 import { Avatar } from '@/components/Avatar.jsx';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog.jsx';
 import { IssueTypeIcon } from '@/components/IssueTypeIcon.jsx';
 import { PriorityIcon, PrioritySelector } from '@/components/PriorityIcon.jsx';
 import { StatusChip, StatusSelector } from '@/components/StatusChip.jsx';
@@ -24,10 +26,32 @@ import { formatLongDate, toDateInput } from '@/utils/date';
 
 export const TaskDetailPage = () => {
   const { id } = useParams();
-  const { tasks, updateTask, updateTaskStatus } = useData();
+  const { tasks, updateTask, updateTaskStatus, deleteTask } = useData();
   const { user } = useAuth();
   const navigate = useNavigate();
   const task = tasks.find((t) => t.id === id);
+
+  // Delete dialog state. Only mgmt + TL see the trigger.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  const canDelete =
+    user?.role === 'management' || user?.role === 'teamLead';
+
+  const handleDelete = async () => {
+    if (!task) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteTask(task.id);
+      // Navigate away once the task is gone — going back to the previous list.
+      navigate(-1);
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : 'Failed to delete task.');
+      setDeleting(false);
+    }
+  };
 
   // Inline-edit state. We keep one toggle per editable field.
   const [editingTitle, setEditingTitle] = useState(false);
@@ -137,9 +161,21 @@ export const TaskDetailPage = () => {
   return (
     <AppLayout title={issueKey(task)}>
       <div className="mx-auto max-w-5xl p-4 lg:p-6">
-        <button onClick={() => navigate(-1)} className="btn-secondary mb-4">
-          <ArrowLeft size={16} /> Back
-        </button>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <button onClick={() => navigate(-1)} className="btn-secondary">
+            <ArrowLeft size={16} /> Back
+          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="btn-danger"
+              title="Delete this task"
+            >
+              <Trash2 size={16} /> Delete task
+            </button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Main */}
@@ -382,6 +418,21 @@ export const TaskDetailPage = () => {
           </div>
         </div>
       </div>
+
+      <ConfirmDeleteDialog
+        open={deleteOpen}
+        title="Delete task?"
+        itemLabel={`${issueKey(task)} — ${task.title}`}
+        busy={deleting}
+        error={deleteError}
+        onCancel={() => {
+          if (!deleting) {
+            setDeleteOpen(false);
+            setDeleteError(null);
+          }
+        }}
+        onConfirm={handleDelete}
+      />
     </AppLayout>
   );
 };

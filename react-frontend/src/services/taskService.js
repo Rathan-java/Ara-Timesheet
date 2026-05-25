@@ -129,6 +129,26 @@ export const taskService = {
     return taskFromBackend(row);
   },
 
+  async delete(taskId) {
+    if (USE_MOCK) {
+      await mockDelay();
+      const idx = tasks.findIndex((t) => t.id === taskId);
+      if (idx === -1) throw new Error(`Task not found: ${taskId}`);
+      const removed = tasks[idx];
+      tasks.splice(idx, 1);
+      // Roll back workspace counters so progress %s stay accurate.
+      const ws = findWorkspace(removed.workspaceId);
+      if (ws) {
+        ws.totalTasks = Math.max(0, ws.totalTasks - 1);
+        if (removed.status === 'done') {
+          ws.completedTasks = Math.max(0, ws.completedTasks - 1);
+        }
+      }
+      return;
+    }
+    await apiRequest(`/tasks/${taskId}`, { method: 'DELETE' });
+  },
+
   async updateStatus(taskId, status) {
     if (USE_MOCK) {
       await mockDelay(100);

@@ -109,6 +109,18 @@ export const DataProvider = ({ children }) => {
           throw err;
         }
       },
+      async deleteTask(taskId) {
+        await taskService.delete(taskId);
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        // Refresh workspaces so totalTasks / completedTasks counters track
+        // the removal (avoids a stale 5/10 reading after deleting 1).
+        try {
+          const ws = await workspaceService.getAll();
+          setWorkspaces(ws);
+        } catch {
+          // Non-critical: if refresh fails the next reload() will catch up.
+        }
+      },
       async updateTaskStatus(taskId, status) {
         // Optimistic update.
         setTasks((prev) =>

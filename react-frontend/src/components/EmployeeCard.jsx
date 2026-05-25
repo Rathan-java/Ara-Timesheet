@@ -40,44 +40,11 @@ export const EmployeeCard = ({
           handleActivate();
         }
       }}
-      className={`card-base group/card relative w-full p-4 text-left transition hover:shadow-card-hover ${
+      className={`card-base group/card w-full p-4 text-left transition hover:shadow-card-hover ${
         onClick ? 'cursor-pointer' : ''
       }`}
       style={{ borderLeft: `3px solid ${colors.primary}` }}
     >
-      {hasActions && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition group-hover/card:opacity-100 focus-within:opacity-100">
-          {onResetPassword && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onResetPassword();
-              }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-jira text-ink-light transition hover:bg-primary/10 hover:text-primary"
-              title="Reset password"
-              aria-label={`Reset password for ${user.name}`}
-            >
-              <KeyRound size={14} />
-            </button>
-          )}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-jira text-ink-light transition hover:bg-error/10 hover:text-error"
-              title="Delete employee"
-              aria-label={`Delete ${user.name}`}
-            >
-              <Trash2 size={14} />
-            </button>
-          )}
-        </div>
-      )}
-
       <div className="flex items-start gap-3">
         <Avatar name={user.name} url={user.avatarUrl} size={44} />
         <div className="min-w-0 flex-1">
@@ -89,9 +56,45 @@ export const EmployeeCard = ({
             <Mail size={11} /> {user.email}
           </p>
         </div>
-        <span className="rounded-[3px] bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-secondary">
-          {roleDisplayName(user.role)}
-        </span>
+        {/* Action icons + role chip share the same flex slot so they never
+            overlap. Icons fade in on hover; the chip stays put. */}
+        <div className="flex items-center gap-1">
+          {hasActions && (
+            <div className="flex items-center gap-0.5 opacity-0 transition group-hover/card:opacity-100 focus-within:opacity-100">
+              {onResetPassword && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onResetPassword();
+                  }}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-jira text-ink-light transition hover:bg-primary/10 hover:text-primary"
+                  title="Reset password"
+                  aria-label={`Reset password for ${user.name}`}
+                >
+                  <KeyRound size={13} />
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-jira text-ink-light transition hover:bg-error/10 hover:text-error"
+                  title="Delete employee"
+                  aria-label={`Delete ${user.name}`}
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          )}
+          <span className="rounded-[3px] bg-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-secondary">
+            {roleDisplayName(user.role)}
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-2 border-t border-divider pt-3">
