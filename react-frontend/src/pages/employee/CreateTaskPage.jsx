@@ -17,7 +17,10 @@ export const CreateTaskPage = () => {
   const myWorkspaces = useMemo(() => {
     if (!user) return [];
     if (user.role === 'employee') {
-      return workspaces.filter((w) => w.memberIds.includes(user.id));
+      const uid = String(user.id);
+      return workspaces.filter((w) =>
+        w.memberIds.some((mid) => String(mid) === uid),
+      );
     }
     return workspaces;
   }, [workspaces, user]);

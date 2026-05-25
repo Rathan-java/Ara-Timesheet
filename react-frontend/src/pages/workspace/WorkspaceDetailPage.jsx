@@ -59,7 +59,9 @@ export const WorkspaceDetailPage = () => {
     );
   }
 
-  const isMember = workspace.memberIds.includes(user?.id);
+  // Type-safe membership check: cached user IDs may be number or string.
+  const isMember = user?.id != null
+    && workspace.memberIds.some((mid) => String(mid) === String(user.id));
   const canEdit = user?.role === 'management' || user?.role === 'teamLead';
   const canView = canEdit || isMember;
 
@@ -84,20 +86,25 @@ export const WorkspaceDetailPage = () => {
     );
   }
 
-  // Derive view data.
+  // Derive view data. memberIds may be strings or numbers depending on cache;
+  // normalise via String() when comparing user ids.
+  const memberIdSet = useMemo(
+    () => new Set(workspace.memberIds.map(String)),
+    [workspace.memberIds],
+  );
   const members = useMemo(
     () =>
       users.filter(
-        (u) => workspace.memberIds.includes(u.id) && u.role === 'employee',
+        (u) => memberIdSet.has(String(u.id)) && u.role === 'employee',
       ),
-    [users, workspace.memberIds],
+    [users, memberIdSet],
   );
   const nonMembers = useMemo(
     () =>
       users.filter(
-        (u) => u.role === 'employee' && !workspace.memberIds.includes(u.id),
+        (u) => u.role === 'employee' && !memberIdSet.has(String(u.id)),
       ),
-    [users, workspace.memberIds],
+    [users, memberIdSet],
   );
   const wsTasks = useMemo(
     () => tasks.filter((t) => t.workspaceId === workspace.id),

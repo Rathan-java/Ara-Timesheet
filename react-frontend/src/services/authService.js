@@ -49,7 +49,13 @@ export const authService = {
     const cached = localStorage.getItem('auth_user');
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const u = JSON.parse(cached);
+        // Defensive: older sessions may have cached numeric IDs before the
+        // adapter started coercing them. Normalise to strings so downstream
+        // comparisons (memberIds.includes(user.id), etc.) work either way.
+        if (u && u.id != null) u.id = String(u.id);
+        if (u && u.teamId != null) u.teamId = String(u.teamId);
+        return u;
       } catch {
         // fall through and try the server
       }
