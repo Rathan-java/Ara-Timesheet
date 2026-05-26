@@ -57,10 +57,23 @@ export const DataProvider = ({ children }) => {
       reload,
       async createTask(payload) {
         const t = await taskService.create(payload);
-        setTasks((prev) => [...prev, t]);
-        const ws = await workspaceService.getAll();
-        setWorkspaces(ws);
-        return t;
+        // The backend's POST /tasks returns the raw inserted row without the
+        // JOINed assignee_name / workspace_name. Enrich from the local
+        // caches so cards render the right avatar + workspace label
+        // immediately instead of showing "?" / blank.
+        const assignee = users.find((u) => String(u.id) === String(t.assigneeId));
+        const ws = workspaces.find((w) => String(w.id) === String(t.workspaceId));
+        const enriched = {
+          ...t,
+          assigneeName: t.assigneeName || assignee?.name || '',
+          assigneeId: t.assigneeId ? String(t.assigneeId) : t.assigneeId,
+          workspaceName: t.workspaceName || ws?.name || '',
+          workspaceId: t.workspaceId ? String(t.workspaceId) : t.workspaceId,
+        };
+        setTasks((prev) => [...prev, enriched]);
+        const wsList = await workspaceService.getAll();
+        setWorkspaces(wsList);
+        return enriched;
       },
       async createUser(payload) {
         const u = await userService.create(payload);

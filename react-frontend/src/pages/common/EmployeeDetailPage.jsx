@@ -114,10 +114,17 @@ export const EmployeeDetailPage = () => {
   const completionPct =
     counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
 
-  const userWorkspaces = useMemo(
-    () => workspaces.filter((w) => w.memberIds.includes(subject.id)),
-    [workspaces, subject.id],
-  );
+  // Type-safe compare — same pattern as WorkspacesPage. Without this a
+  // numeric memberIds entry from one backend variant won't match a string
+  // subject.id, and the user appears to be in zero workspaces.
+  const userWorkspaces = useMemo(() => {
+    const uid = String(subject.id);
+    return workspaces.filter(
+      (w) =>
+        Array.isArray(w.memberIds) &&
+        w.memberIds.some((mid) => String(mid) === uid),
+    );
+  }, [workspaces, subject.id]);
 
   const filteredTasks = useMemo(
     () => userTasks.filter((t) => matchesFilter(t, filter)),
