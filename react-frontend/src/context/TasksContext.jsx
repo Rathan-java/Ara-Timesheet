@@ -28,16 +28,24 @@ export const DataProvider = ({ children }) => {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, u, w, tm] = await Promise.all([
+      // Use allSettled so one endpoint failing (e.g. /users returns 403 for
+      // employees) doesn't blank out the entire dashboard. Each slice loads
+      // independently; failed slices stay as their previous value (or empty
+      // on first load), succeeded slices update normally.
+      const [t, u, w, tm] = await Promise.allSettled([
         taskService.getAll(),
         userService.getAll(),
         workspaceService.getAll(),
         teamService.getAll(),
       ]);
-      setTasks(t);
-      setUsers(u);
-      setWorkspaces(w);
-      setTeams(tm);
+      if (t.status === 'fulfilled') setTasks(t.value);
+      else console.warn('Failed to load tasks:', t.reason?.message);
+      if (u.status === 'fulfilled') setUsers(u.value);
+      else console.warn('Failed to load users:', u.reason?.message);
+      if (w.status === 'fulfilled') setWorkspaces(w.value);
+      else console.warn('Failed to load workspaces:', w.reason?.message);
+      if (tm.status === 'fulfilled') setTeams(tm.value);
+      else console.warn('Failed to load teams:', tm.reason?.message);
     } finally {
       setLoading(false);
     }
