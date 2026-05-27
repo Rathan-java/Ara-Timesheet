@@ -106,6 +106,30 @@ export const taskService = {
       method: 'POST',
       body: JSON.stringify(taskCreateToBackend(payload)),
     });
+    // Workaround: the Azure MySQL backend ignores `status` on POST and always
+    // saves new tasks as 'todo'. If the caller asked for a different initial
+    // status (e.g. management creating a task already In Progress / Done),
+    // patch it right after create so the user sees what they picked.
+    // Costs an extra PATCH only when status !== 'todo'. The Postgres backend
+    // accepted status on POST, so this branch was a no-op there.
+    if (
+      payload.status &&
+      payload.status !== 'todo' &&
+      row?.status !== statusToBackend(payload.status)
+    ) {
+      try {
+        const patched = await apiRequest(`/tasks/${row.id}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: statusToBackend(payload.status) }),
+        });
+        return taskFromBackend(patched);
+      } catch (e) {
+        // If the patch fails the task still exists (just as 'todo'); surface
+        // a warning but return what we have rather than fail the whole create.
+        // eslint-disable-next-line no-console
+        console.warn('Status patch after create failed:', e);
+      }
+    }
     return taskFromBackend(row);
   },
 

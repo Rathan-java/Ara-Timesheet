@@ -25,35 +25,73 @@ export const DataProvider = ({ children }) => {
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Silent fetch — same as reload() but doesn't toggle loading state.
+  // Used by background polling + focus refetch so a 30s tick doesn't flash a
+  // spinner across the whole UI.
+  const fetchAll = useCallback(async () => {
+    const [t, u, w, tm] = await Promise.allSettled([
+      taskService.getAll(),
+      userService.getAll(),
+      workspaceService.getAll(),
+      teamService.getAll(),
+    ]);
+    if (t.status === 'fulfilled') setTasks(t.value);
+    else console.warn('Failed to load tasks:', t.reason?.message);
+    if (u.status === 'fulfilled') setUsers(u.value);
+    else console.warn('Failed to load users:', u.reason?.message);
+    if (w.status === 'fulfilled') setWorkspaces(w.value);
+    else console.warn('Failed to load workspaces:', w.reason?.message);
+    if (tm.status === 'fulfilled') setTeams(tm.value);
+    else console.warn('Failed to load teams:', tm.reason?.message);
+  }, []);
+
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      // Use allSettled so one endpoint failing (e.g. /users returns 403 for
-      // employees) doesn't blank out the entire dashboard. Each slice loads
-      // independently; failed slices stay as their previous value (or empty
-      // on first load), succeeded slices update normally.
-      const [t, u, w, tm] = await Promise.allSettled([
-        taskService.getAll(),
-        userService.getAll(),
-        workspaceService.getAll(),
-        teamService.getAll(),
-      ]);
-      if (t.status === 'fulfilled') setTasks(t.value);
-      else console.warn('Failed to load tasks:', t.reason?.message);
-      if (u.status === 'fulfilled') setUsers(u.value);
-      else console.warn('Failed to load users:', u.reason?.message);
-      if (w.status === 'fulfilled') setWorkspaces(w.value);
-      else console.warn('Failed to load workspaces:', w.reason?.message);
-      if (tm.status === 'fulfilled') setTeams(tm.value);
-      else console.warn('Failed to load teams:', tm.reason?.message);
+      await fetchAll();
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchAll]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  // Near-real-time updates without WebSockets:
+  // - Refetch when the tab regains focus (catches "manager assigned to me
+  //   while I was on another tab" within the time it takes to click back).
+  // - Background poll every 30s while the tab is visible, so even a user
+  //   sitting on the same tab sees new tasks within at most 30 seconds.
+  // Background refreshes go through fetchAll() (no loading spinner) so the
+  // UI doesn't flash on every tick.
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 30_000;
+    const intervalId = setInterval(() => {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState === 'visible'
+      ) {
+        void fetchAll();
+      }
+    }, POLL_INTERVAL_MS);
+
+    const onFocus = () => {
+      void fetchAll();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void fetchAll();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [fetchAll]);
 
   const value = useMemo(
     () => ({
