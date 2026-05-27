@@ -1,0 +1,6 @@
+title,description,project_code,assignee_email,status,priority,estimated_hours,deadline
+Implement login flow,JWT-based auth with refresh tokens,SCH,alice@example.com,done,high,16,2026-05-15
+Design report card PDF,Match the print layout pixel-for-pixel,SCH,bob@example.com,in_progress,medium,12,2026-06-10
+Fix payment gateway bug,Failed transactions not logged,CRM,alice@example.com,in_progress,highest,4,2026-05-30
+Bulk import student roster,CSV upload with validation,SCH,bob@example.com,todo,medium,20,2026-07-01
+Leave approval workflow,Multi-level approval with delegation,HRM,carol@example.com,review,high,18,2026-06-20

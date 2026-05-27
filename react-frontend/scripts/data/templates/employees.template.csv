@@ -1,0 +1,5 @@
+name,email,role,designation,team,password,phone
+Alice Johnson,alice@example.com,employee,Senior Software Engineer,Development,changeme123,
+Bob Smith,bob@example.com,employee,Backend Developer,Development,,
+Carol Davis,carol@example.com,team_lead,QA Lead,QA,,
+Maria Chen,maria@example.com,management,Head of Engineering,,changeme123,

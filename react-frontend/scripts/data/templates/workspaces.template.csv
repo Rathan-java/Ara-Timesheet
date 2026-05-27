@@ -1,0 +1,4 @@
+name,description,project_code,color,icon,member_emails
+Schoolmate,School management system,SCH,#0052CC,GraduationCap,alice@example.com;bob@example.com
+CRM,Customer relationship management,CRM,#00875A,Users,alice@example.com;carol@example.com
+HRMS,Human resources system,HRM,#FF8B00,Briefcase,bob@example.com;carol@example.com

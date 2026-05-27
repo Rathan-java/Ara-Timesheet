@@ -7,3 +7,6 @@ dist-ssr
 .env
 .env.local
 .vercel
+
+# Bulk-import data files — keep your real CSVs local, only commit templates.
+scripts/data/*.csv
