@@ -38,16 +38,22 @@ export const TaskStatusPieChart = ({ tasks }) => {
   }
 
   return (
-    <div className="flex h-full items-center gap-4">
-      <div className="flex-1" style={{ minHeight: 180 }}>
+    // NOTE on heights: ResponsiveContainer reads offsetHeight, NOT min-height,
+    // so the pie wrapper MUST have an explicit height that resolves to a real
+    // pixel value. Previously this used `items-center` which sized children to
+    // their content height (= 0 before the SVG paints), so the pie collapsed
+    // and only the legend rendered. Using `h-full` on both children (plus
+    // `items-stretch` via default flex) gives the pie a concrete height.
+    <div className="flex h-full gap-4">
+      <div className="h-full flex-1 min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               dataKey="value"
               nameKey="name"
-              innerRadius={40}
-              outerRadius={70}
+              innerRadius="45%"
+              outerRadius="85%"
               paddingAngle={2}
               labelLine={false}
               label={({ value }) => value}
@@ -60,7 +66,7 @@ export const TaskStatusPieChart = ({ tasks }) => {
           </PieChart>
         </ResponsiveContainer>
       </div>
-      <ul className="flex flex-col gap-2 text-sm">
+      <ul className="flex h-full flex-col justify-center gap-2 text-sm">
         {data.map((d) => (
           <li key={d.name} className="flex items-center gap-2 text-ink-secondary">
             <span
