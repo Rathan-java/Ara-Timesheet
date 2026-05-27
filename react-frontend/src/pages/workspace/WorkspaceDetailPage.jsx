@@ -42,7 +42,37 @@ export const WorkspaceDetailPage = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
-  const workspace = workspaces.find((w) => w.id === id);
+  // Find workspace by id — string compare (adapter coerces both sides).
+  const workspace = workspaces.find((w) => String(w.id) === String(id));
+
+  // IMPORTANT: every hook must run on every render. Previously these useMemo
+  // calls came AFTER the `if (!workspace)` / `if (!canView)` early returns,
+  // which caused "Rendered more hooks than during the previous render" and
+  // crashed the component to a blank page when the workspaces list loaded
+  // asynchronously. Compute them up-front with null-safe access; the
+  // conditional returns can happen below.
+  const memberIdSet = useMemo(
+    () => new Set((workspace?.memberIds ?? []).map(String)),
+    [workspace?.memberIds],
+  );
+  const members = useMemo(
+    () =>
+      users.filter(
+        (u) => memberIdSet.has(String(u.id)) && u.role === 'employee',
+      ),
+    [users, memberIdSet],
+  );
+  const nonMembers = useMemo(
+    () =>
+      users.filter(
+        (u) => u.role === 'employee' && !memberIdSet.has(String(u.id)),
+      ),
+    [users, memberIdSet],
+  );
+  const wsTasks = useMemo(
+    () => tasks.filter((t) => String(t.workspaceId) === String(workspace?.id)),
+    [tasks, workspace?.id],
+  );
 
   if (!workspace) {
     return (
@@ -60,8 +90,9 @@ export const WorkspaceDetailPage = () => {
   }
 
   // Type-safe membership check: cached user IDs may be number or string.
-  const isMember = user?.id != null
-    && workspace.memberIds.some((mid) => String(mid) === String(user.id));
+  const isMember =
+    user?.id != null &&
+    workspace.memberIds.some((mid) => String(mid) === String(user.id));
   const canEdit = user?.role === 'management' || user?.role === 'teamLead';
   const canView = canEdit || isMember;
 
@@ -85,31 +116,6 @@ export const WorkspaceDetailPage = () => {
       </AppLayout>
     );
   }
-
-  // Derive view data. memberIds may be strings or numbers depending on cache;
-  // normalise via String() when comparing user ids.
-  const memberIdSet = useMemo(
-    () => new Set(workspace.memberIds.map(String)),
-    [workspace.memberIds],
-  );
-  const members = useMemo(
-    () =>
-      users.filter(
-        (u) => memberIdSet.has(String(u.id)) && u.role === 'employee',
-      ),
-    [users, memberIdSet],
-  );
-  const nonMembers = useMemo(
-    () =>
-      users.filter(
-        (u) => u.role === 'employee' && !memberIdSet.has(String(u.id)),
-      ),
-    [users, memberIdSet],
-  );
-  const wsTasks = useMemo(
-    () => tasks.filter((t) => t.workspaceId === workspace.id),
-    [tasks, workspace.id],
-  );
 
   const Icon = iconByName(workspace.icon) ?? Folder;
   const pct = Math.round(workspaceCompletion(workspace) * 100);
