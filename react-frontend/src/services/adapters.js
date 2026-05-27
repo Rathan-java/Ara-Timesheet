@@ -51,6 +51,24 @@ export const userUpdateToBackend = (p) => ({
   phone: p.phone,
 });
 
+// MySQL's DATE column rejects ISO datetime strings like '2026-06-03T00:00:00.000Z'
+// with "Incorrect date value". It needs plain 'YYYY-MM-DD'. The frontend stores
+// deadlines as ISO strings (or Date objects from <input type="date">), so we
+// normalise to date-only before sending to the backend. The same backend stored
+// in Postgres happily accepted the ISO form, which is why this bug only showed
+// up after the move to Azure MySQL.
+const toDateOnly = (v) => {
+  if (v == null || v === '') return undefined;
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = v instanceof Date ? v : new Date(v);
+  if (Number.isNaN(d.getTime())) return undefined;
+  // Local-date slicing so a Date from the picker isn't shifted by timezone.
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 // ---- Task ----
 export const taskFromBackend = (t) => {
   if (!t) return t;
@@ -85,7 +103,7 @@ export const taskCreateToBackend = (p) => ({
   workspace_id: p.workspaceId ? Number(p.workspaceId) : undefined,
   assignee_id: p.assigneeId ? Number(p.assigneeId) : undefined,
   estimated_hours: p.estimatedHours ?? 0,
-  deadline: p.deadline,
+  deadline: toDateOnly(p.deadline),
 });
 
 export const taskUpdateToBackend = (patch) => {
@@ -95,7 +113,7 @@ export const taskUpdateToBackend = (patch) => {
   if (patch.status !== undefined) out.status = statusToBackend(patch.status);
   if (patch.priority !== undefined) out.priority = patch.priority;
   if (patch.estimatedHours !== undefined) out.estimated_hours = patch.estimatedHours;
-  if (patch.deadline !== undefined) out.deadline = patch.deadline;
+  if (patch.deadline !== undefined) out.deadline = toDateOnly(patch.deadline);
   return out;
 };
 
