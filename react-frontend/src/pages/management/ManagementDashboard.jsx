@@ -13,7 +13,6 @@ import { StatCard } from '@/components/StatCard.jsx';
 import { WorkspaceCard } from '@/components/WorkspaceCard.jsx';
 import { MonthlyLineChart, TaskStatusPieChart } from '@/components/TaskChart.jsx';
 import { useData } from '@/context/TasksContext.jsx';
-import { monthlyTaskData } from '@/data/mockData';
 import { isOverdue } from '@/types';
 import { colors } from '@/utils/theme';
 import { userDetailPath, workspaceDetailPath } from '@/utils/paths';
@@ -45,6 +44,48 @@ export const ManagementDashboard = () => {
       overdue,
     };
   }, [tasks, users, workspaces]);
+
+  // Real monthly trend computed from actual tasks (replaces hardcoded
+  // mockData.monthlyTaskData which was confusing — showed Jan-Apr numbers
+  // even though the system had zero data for those months). Rolling 6-month
+  // window ending with the current month. Bucket by task createdAt; a task
+  // is "completed in month X" if it's currently done AND was created in
+  // that month (simpler than tracking completed_at and good enough for
+  // a high-level trend).
+  const monthlyTaskData = useMemo(() => {
+    const now = new Date();
+    const buckets = [];
+    for (let i = 5; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({
+        key: `${d.getFullYear()}-${d.getMonth()}`,
+        month: d.toLocaleString('en-US', { month: 'short' }),
+        total: 0,
+        completed: 0,
+      });
+    }
+    const byKey = new Map(buckets.map((b) => [b.key, b]));
+    tasks.forEach((t) => {
+      if (!t.createdAt) return;
+      const d = new Date(t.createdAt);
+      if (Number.isNaN(d.getTime())) return;
+      const bucket = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
+      if (!bucket) return;
+      bucket.total += 1;
+      if (t.status === 'done') bucket.completed += 1;
+    });
+    return buckets;
+  }, [tasks]);
+
+  // Pre-group tasks by workspace so each pie below renders from a real slice.
+  const tasksByWorkspace = useMemo(() => {
+    const m = new Map();
+    workspaces.forEach((w) => m.set(w.id, []));
+    tasks.forEach((t) => {
+      if (m.has(t.workspaceId)) m.get(t.workspaceId).push(t);
+    });
+    return m;
+  }, [tasks, workspaces]);
 
   return (
     <AppLayout title="Organization Overview">
@@ -145,6 +186,53 @@ export const ManagementDashboard = () => {
             ))}
           </div>
         </section>
+
+        {/* One pie per workspace — same TaskStatusPieChart, just sliced by
+            workspaceId. Pure frontend, no extra API calls. */}
+        {workspaces.length > 0 && (
+          <section className="mt-6">
+            <h3 className="mb-3 text-base font-semibold text-ink">
+              Status by Workspace
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {workspaces.map((w) => {
+                const wsTasks = tasksByWorkspace.get(w.id) ?? [];
+                return (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() =>
+                      navigate(workspaceDetailPath('management', w.id))
+                    }
+                    className="card-base p-4 text-left transition hover:shadow-card-hover"
+                    style={{ borderLeft: `3px solid ${w.color}` }}
+                  >
+                    <div className="mb-2 flex items-center gap-2">
+                      <h4 className="truncate text-sm font-semibold text-ink">
+                        {w.name}
+                      </h4>
+                      <span
+                        className="rounded-[3px] px-1.5 py-0.5 text-[10px] font-bold"
+                        style={{
+                          backgroundColor: `${w.color}26`,
+                          color: w.color,
+                        }}
+                      >
+                        {w.projectCode}
+                      </span>
+                      <span className="ml-auto text-[11px] text-ink-light">
+                        {wsTasks.length} tasks
+                      </span>
+                    </div>
+                    <div className="h-44">
+                      <TaskStatusPieChart tasks={wsTasks} />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
     </AppLayout>
   );
