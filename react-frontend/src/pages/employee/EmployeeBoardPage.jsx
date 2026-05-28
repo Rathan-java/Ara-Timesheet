@@ -12,6 +12,7 @@ import { KanbanBoard } from '@/components/KanbanBoard.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useData } from '@/context/TasksContext.jsx';
 import { taskService } from '@/services/taskService';
+import { isInSprintWindow } from '@/types';
 
 export const EmployeeBoardPage = () => {
   const { user } = useAuth();
@@ -79,11 +80,13 @@ export const EmployeeBoardPage = () => {
   }, [selectedWorkspaceId, refetch]);
 
   // What the Kanban actually renders. The toggle further narrows to my own
-  // tasks; off → whole team in the workspace.
+  // tasks; off → whole team in the workspace. isInSprintWindow keeps Done
+  // tasks for 14 days after completion (DB still stores everything).
   const visibleTasks = useMemo(() => {
-    if (!myTasksOnly) return workspaceTasks;
+    const windowed = workspaceTasks.filter(isInSprintWindow);
+    if (!myTasksOnly) return windowed;
     const uid = String(user?.id);
-    return workspaceTasks.filter((t) => String(t.assigneeId) === uid);
+    return windowed.filter((t) => String(t.assigneeId) === uid);
   }, [workspaceTasks, myTasksOnly, user?.id]);
 
   // Drag-to-change-status: optimistic local update + persist + refetch so

@@ -19,6 +19,19 @@ export const issueKey = (t) => `${t.projectCode}-${t.issueNumber}`;
 export const isOverdue = (t) =>
   new Date(t.deadline).getTime() < Date.now() && t.status !== 'done';
 
+// Sprint-window rule for the Kanban board: Done tasks drop off 14 days
+// after completion so the Done column doesn't grow unbounded across
+// sprints. The DB still keeps every task — All Tasks + the Excel export
+// remain authoritative for historical queries.
+const SPRINT_DONE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+export const isInSprintWindow = (t) => {
+  if (t.status !== 'done') return true;
+  // Fall back to createdAt for legacy rows where completedAt wasn't recorded.
+  const ts = new Date(t.completedAt ?? t.createdAt).getTime();
+  if (Number.isNaN(ts)) return true;
+  return Date.now() - ts <= SPRINT_DONE_WINDOW_MS;
+};
+
 export const workspaceCompletion = (w) =>
   w.totalTasks > 0 ? w.completedTasks / w.totalTasks : 0;
 

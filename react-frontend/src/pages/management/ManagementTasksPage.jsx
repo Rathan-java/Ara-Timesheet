@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppLayout } from '@/components/AppLayout.jsx';
 import { EmptyState } from '@/components/EmptyState.jsx';
+import { ExportTasksDialog } from '@/components/ExportTasksDialog.jsx';
 import { MiniStatCard } from '@/components/StatCard.jsx';
 import { TaskCard } from '@/components/TaskCard.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
@@ -43,14 +44,19 @@ export const ManagementTasksPage = () => {
   const [filter, setFilter] = useState(initialFilter);
   const [workspaceId, setWorkspaceId] = useState(initialWorkspace);
   const [query, setQuery] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(null);
 
-  const handleExport = async () => {
+  // Two-step export: open the date-range dialog, then call the backend with
+  // the chosen window. Empty from/to means unbounded on that side — same
+  // contract as /api/export/tasks.xlsx.
+  const handleExportConfirm = async ({ from, to }) => {
     setExporting(true);
     setExportError(null);
     try {
-      await exportService.downloadAllTasks();
+      await exportService.downloadAllTasks({ from, to });
+      setExportOpen(false);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Export failed.');
     } finally {
@@ -111,22 +117,19 @@ export const ManagementTasksPage = () => {
         FEATURE_EXPORT ? (
           <button
             type="button"
-            onClick={handleExport}
-            disabled={exporting}
+            onClick={() => {
+              setExportError(null);
+              setExportOpen(true);
+            }}
             className="btn-secondary"
-            title="Download all tasks as Excel"
+            title="Download tasks as Excel for a date range"
           >
-            <Download size={16} /> {exporting ? 'Exporting…' : 'Export to Excel'}
+            <Download size={16} /> Export to Excel
           </button>
         ) : null
       }
     >
       <div className="mx-auto max-w-6xl p-4 lg:p-6">
-        {exportError && (
-          <p className="mb-3 rounded-jira bg-error/10 px-3 py-2 text-sm text-error">
-            {exportError}
-          </p>
-        )}
         {/* Summary chips */}
         <div className="flex flex-wrap gap-2">
           <MiniStatCard title="Total" value={counts.total} color={colors.primary} />
@@ -221,6 +224,19 @@ export const ManagementTasksPage = () => {
           )}
         </div>
       </div>
+
+      <ExportTasksDialog
+        open={exportOpen}
+        busy={exporting}
+        error={exportError}
+        onCancel={() => {
+          if (!exporting) {
+            setExportOpen(false);
+            setExportError(null);
+          }
+        }}
+        onConfirm={handleExportConfirm}
+      />
     </AppLayout>
   );
 };

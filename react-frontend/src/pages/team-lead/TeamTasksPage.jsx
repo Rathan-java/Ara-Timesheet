@@ -5,6 +5,7 @@ import { AppLayout } from '@/components/AppLayout.jsx';
 import { KanbanBoard } from '@/components/KanbanBoard.jsx';
 import { useAuth } from '@/context/AuthContext.jsx';
 import { useData } from '@/context/TasksContext.jsx';
+import { isInSprintWindow } from '@/types';
 import { taskDetailPath } from '@/utils/paths';
 
 export const TeamTasksPage = () => {
@@ -20,7 +21,11 @@ export const TeamTasksPage = () => {
 
   const teamTasks = useMemo(() => {
     const memberIds = new Set(teamMembers.map((m) => m.id));
-    let list = tasks.filter((t) => memberIds.has(t.assigneeId));
+    // Sprint window: Done tasks drop off the board 14 days after completion
+    // (still available via All Tasks + Excel export).
+    let list = tasks
+      .filter((t) => memberIds.has(t.assigneeId))
+      .filter(isInSprintWindow);
     if (assigneeFilter !== 'all') {
       list = list.filter((t) => t.assigneeId === assigneeFilter);
     }

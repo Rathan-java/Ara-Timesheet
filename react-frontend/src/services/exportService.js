@@ -20,9 +20,16 @@ const filenameFromHeader = (header) => {
   return match ? match[1] : null;
 };
 
+// Accepts optional { from, to } in YYYY-MM-DD. Backend filters on
+// DATE(created_at) inclusive on both ends; omitting either side means
+// "unbounded on that side".
 export const exportService = {
-  async downloadAllTasks() {
-    const res = await apiFetch('/export/tasks.xlsx');
+  async downloadAllTasks({ from, to } = {}) {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const qs = params.toString();
+    const res = await apiFetch(`/export/tasks.xlsx${qs ? `?${qs}` : ''}`);
     if (!res.ok) {
       let msg = `Export failed (HTTP ${res.status})`;
       try {

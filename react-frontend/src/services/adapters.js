@@ -83,6 +83,7 @@ export const taskFromBackend = (t) => {
     workspaceId: toStrId(t.workspace_id),
     workspaceName: t.workspace_name ?? '',
     createdAt: t.created_at,
+    completedAt: t.completed_at ?? null,
     deadline: t.deadline,
     assignedById: toStrId(t.assigned_by_id),
     assignedByName: t.assigned_by_name ?? '',
