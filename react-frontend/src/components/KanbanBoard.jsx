@@ -91,9 +91,11 @@ const Column = ({ status, label, color, tasks, onTaskClick, onAdd }) => {
         )}
       </div>
 
-      {/* Drop area */}
+      {/* Drop area — independent vertical scroll per column so a long Done
+          column doesn't clip its tail. min-h-0 lets flex-1 shrink to the
+          parent so overflow-y-auto can engage. */}
       <div
-        className={`min-h-[120px] flex-1 space-y-2 rounded-b-jira-lg p-2 transition ${
+        className={`min-h-0 flex-1 space-y-2 overflow-y-auto rounded-b-jira-lg p-2 transition ${
           isOver ? 'ring-2 ring-primary/40' : ''
         }`}
         style={
