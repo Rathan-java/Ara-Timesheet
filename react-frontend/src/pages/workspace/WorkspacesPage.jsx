@@ -98,13 +98,15 @@ export const WorkspacesPage = () => {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {visible.map((w) => {
               const wsTasks = tasks.filter((t) => t.workspaceId === w.id);
+              // 4 most-recent tasks, laid out as 2 cols x 2 rows below
+              // (was 3 stacked cards — too tall).
               const recent = [...wsTasks]
                 .sort(
                   (a, b) =>
                     new Date(b.createdAt).getTime() -
                     new Date(a.createdAt).getTime(),
                 )
-                .slice(0, 3);
+                .slice(0, 4);
               return (
                 <div key={w.id} className="space-y-3">
                   <WorkspaceCard
@@ -131,7 +133,7 @@ export const WorkspacesPage = () => {
                     {recent.length === 0 ? (
                       <p className="text-xs text-ink-light">No tasks yet.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         {recent.map((t) => (
                           <TaskCard
                             key={t.id}

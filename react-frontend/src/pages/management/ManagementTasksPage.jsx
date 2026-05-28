@@ -201,8 +201,10 @@ export const ManagementTasksPage = () => {
           Showing {filtered.length} of {counts.total} tasks
         </p>
 
-        {/* Task list */}
-        <div className="mt-2 space-y-2">
+        {/* Task list — compact 3-column grid (was a single-column stack).
+            Cards shrink to fit and the page no longer scrolls forever once
+            the workspace has many tasks. */}
+        <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.length === 0 ? (
             <EmptyState
               title="No tasks match"
